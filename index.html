@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gate Control Terminal</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; text-align: center; margin: 0; padding: 20px; background: #f1f3f4; color: #3c4043; }
+    .container { max-width: 400px; margin: auto; background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
+    h2 { color: #1a73e8; margin-top: 0; font-size: 22px; }
+    #video-container { position: relative; width: 100%; height: 280px; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 15px; }
+    video { width: 100%; height: 100%; object-fit: cover; }
+    .popup { display: none; padding: 16px; border-radius: 10px; color: white; font-weight: bold; font-size: 16px; margin-top: 15px; white-space: pre-line; box-shadow: 0 4px 10px rgba(0,0,0,0.15); animation: popUp 0.25s ease-out; }
+    .success { background: #137333; display: block; }
+    .warning { background: #b06000; display: block; }
+    .error { background: #c5221f; display: block; }
+    #loading-message { color: #5f6368; font-size: 14px; font-weight: 500; margin: 12px 0; }
+    @keyframes popUp { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Gate Operations Terminal</h2>
+    <p id="loading-message">🎬 Initializing camera hardware pipelines...</p>
+    <div id="video-container">
+      <video id="preview" autoplay playsinline></video>
+    </div>
+    <div id="status-box" class="popup"></div>
+  </div>
+
+  <script>
+    // CRITICAL PASTE: Put your exact Google Script Deployment Web App URL here
+    const GOOGLE_SCRIPT_API_URL = "https://script.google.com/macros/s/AKfycbwVLMjaWNiLr4IiHWOPxAyxJxqUuhXwpoK8ihjtqVzochan9-90gY9wPZyGjtBMX8m7Ew/exec";
+
+    const video = document.getElementById('preview');
+    const loadingMessage = document.getElementById('loading-message');
+    const statusBox = document.getElementById('status-box');
+    let isProcessing = false;
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(stream => {
+      video.srcObject = stream;
+      loadingMessage.innerText = "📷 Camera active. Scan ticket QR code.";
+      requestAnimationFrame(tick);
+    }).catch(err => {
+      loadingMessage.innerText = "❌ Error: Camera access denied. Check your browser permissions.";
+    });
+
+    function tick() {
+      if (video.readyState === video.HAVE_ENOUGH_DATA && !isProcessing) {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+        
+        if (code && code.data.trim().startsWith("EVNT-")) {
+          processTicket(code.data.trim());
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function processTicket(ticketId) {
+      isProcessing = true;
+      loadingMessage.innerText = "⚡ Communicating with registration ledger...";
+      
+      // Send cross-domain call to your backend Google Web App safely
+      fetch(`${GOOGLE_SCRIPT_API_URL}?id=${encodeURIComponent(ticketId)}`)
+        .then(response => response.text())
+        .then(text => {
+          statusBox.className = "popup"; 
+          
+          if (text.includes("✅")) {
+            statusBox.classList.add("success");
+          } else if (text.includes("⚠️")) {
+            statusBox.classList.add("warning");
+          } else {
+            statusBox.classList.add("error");
+          }
+          
+          statusBox.textContent = text;
+          loadingMessage.innerText = "📷 Ready for next scan.";
+          
+          setTimeout(() => {
+            statusBox.className = "popup";
+            isProcessing = false;
+          }, 3500);
+        })
+        .catch(err => {
+          statusBox.className = "popup error";
+          statusBox.textContent = "❌ Network Error communicating with Google server.";
+          setTimeout(() => { statusBox.className = "popup"; isProcessing = false; }, 3500);
+        });
+    }
+  </script>
+</body>
+</html>
