@@ -6,8 +6,8 @@
   <title>Gate Control Terminal</title>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <style>
-    body { font-family: -apple-system, system-ui, sans-serif; text-align: center; margin: 0; padding: 20px; background: #f1f3f4; color: #3c4043; }
-    .container { max-width: 400px; margin: auto; background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; margin: 0; padding: 20px; background: #f1f3f4; color: #3c4043; }
+    .container { max-width: 420px; margin: auto; background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 15px; }
     h2 { color: #1a73e8; margin-top: 0; font-size: 22px; }
     #video-container { position: relative; width: 100%; height: 280px; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 15px; }
     video { width: 100%; height: 100%; object-fit: cover; }
@@ -23,7 +23,7 @@
 
   <div class="container">
     <h2>Gate Operations Terminal</h2>
-    <p id="loading-message">🎬 Initializing camera hardware pipelines...</p>
+    <p id="loading-message">🎬 Initializing camera hardware...</p>
     <div id="video-container">
       <video id="preview" autoplay playsinline></video>
     </div>
@@ -31,8 +31,10 @@
   </div>
 
   <script>
-    // CRITICAL PASTE: Put your exact Google Script Deployment Web App URL here
-    const GOOGLE_SCRIPT_API_URL = "https://script.google.com/macros/s/AKfycbwVLMjaWNiLr4IiHWOPxAyxJxqUuhXwpoK8ihjtqVzochan9-90gY9wPZyGjtBMX8m7Ew/exec";
+    // -------------------------------------------------------------
+    // PASTE YOUR /exec WEB APP URL HERE INSIDE THE QUOTES
+    // -------------------------------------------------------------
+    const GOOGLE_SCRIPT_API_URL = "https://script.google.com/macros/s/AKfycbxZztmVaZ_azP4wyiGuTobgOsOzrWhn-gPHiMjM4NXkhpFjkeGLXNupdJaVsNRVMwnehw/exec";
 
     const video = document.getElementById('preview');
     const loadingMessage = document.getElementById('loading-message');
@@ -44,7 +46,7 @@
       loadingMessage.innerText = "📷 Camera active. Scan ticket QR code.";
       requestAnimationFrame(tick);
     }).catch(err => {
-      loadingMessage.innerText = "❌ Error: Camera access denied. Check your browser permissions.";
+      loadingMessage.innerText = "❌ Error: Camera access denied. Check browser permissions.";
     });
 
     function tick() {
@@ -67,9 +69,8 @@
 
     function processTicket(ticketId) {
       isProcessing = true;
-      loadingMessage.innerText = "⚡ Communicating with registration ledger...";
+      loadingMessage.innerText = "⚡ Checking registration database...";
       
-      // Send cross-domain call to your backend Google Web App safely
       fetch(`${GOOGLE_SCRIPT_API_URL}?id=${encodeURIComponent(ticketId)}`)
         .then(response => response.text())
         .then(text => {
@@ -93,7 +94,7 @@
         })
         .catch(err => {
           statusBox.className = "popup error";
-          statusBox.textContent = "❌ Network Error communicating with Google server.";
+          statusBox.textContent = "❌ Network Error communicating with Google Sheet.";
           setTimeout(() => { statusBox.className = "popup"; isProcessing = false; }, 3500);
         });
     }
